@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/noDescendingSpecificity: Biome v2 migration */
 *,
 *::before,
 *::after {
@@ -198,7 +199,7 @@ select:disabled {
 	transform: initial;
 }
 
-/* Temporary solution for issue: https://github.com/Sendouc/sendou.ink/issues/1141 */
+/* Temporary solution for issue: https://github.com/sendou-ink/sendou.ink/issues/1141 */
 .light select {
 	/* TODO: Get color from CSS var */
 	background-image: url('data:image/svg+xml;utf8,<svg width="1rem" color="rgb(0 0 0 / 55%)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>');
@@ -415,83 +416,6 @@ abbr[title] {
 .articles-list__title {
 	color: var(--theme);
 	font-size: var(--fonts-md);
-}
-
-.combobox-wrapper {
-	position: relative;
-}
-
-.combobox-input {
-	width: var(--input-width, 12rem);
-}
-
-.combobox-input.fullWidth {
-	width: 100%;
-}
-
-.combobox-options {
-	position: absolute;
-	z-index: 2;
-	width: var(--input-width, 12rem);
-	border-radius: var(--rounded);
-	margin-top: var(--s-2);
-	background-color: var(--bg-darker);
-	color: var(--text);
-	font-size: var(--fonts-sm);
-	padding-block: var(--s-3);
-	padding-inline: 0;
-}
-
-.combobox-options.fullWidth {
-	width: 100%;
-}
-
-.combobox-options.empty {
-	padding-block: var(--s-1-5);
-}
-
-.combobox-item {
-	display: flex;
-	align-items: center;
-	padding: var(--s-1) var(--s-3);
-	gap: var(--s-2);
-	list-style: none;
-}
-
-.combobox-item-image {
-	min-width: 24px;
-}
-
-.combobox-item-label {
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	overflow-x: hidden;
-}
-
-.combobox-no-matches {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--text-lighter);
-	font-size: var(--fonts-xs);
-	font-weight: var(--bold);
-	gap: var(--s-1);
-}
-
-.combobox-emoji {
-	color: var(--text);
-	font-size: var(--fonts-lg);
-}
-
-.combobox-item.active {
-	background-color: var(--theme-transparent);
-}
-
-.combobox-username {
-	max-width: 100px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 .article > p {
@@ -1214,12 +1138,20 @@ html[dir="rtl"] .fix-rtl {
 }
 
 .chat__room-button {
-	background-color: var(--bg-light);
+	background-color: transparent;
 	color: var(--text-lighter);
 	border-radius: var(--rounded) var(--rounded) 0 0;
-	font-size: var(--fonts-xs);
 	padding: var(--s-1) var(--s-1);
 	border-color: var(--bg-light-variation);
+	font-size: var(--fonts-xs);
+	padding-block: var(--s-1);
+	padding-inline: var(--s-2);
+	display: flex;
+	width: auto;
+	align-items: center;
+	justify-content: center;
+	font-weight: var(--bold);
+	flex: 1 1 0px;
 }
 
 .chat__room-button.current {
@@ -1325,7 +1257,9 @@ html[dir="rtl"] .fix-rtl {
 	width: var(--map-width);
 	border: none;
 	background-color: transparent;
-	transition: filter, opacity 0.2s;
+	transition:
+		filter,
+		opacity 0.2s;
 	border-radius: var(--rounded);
 }
 

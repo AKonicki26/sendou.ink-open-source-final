@@ -3,26 +3,20 @@ import clsx from "clsx";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar } from "~/components/Avatar";
-import { FormWithConfirm } from "~/components/FormWithConfirm";
-import { Pagination } from "~/components/Pagination";
-import { LinkButton } from "~/components/elements/Button";
-import { SendouButton } from "~/components/elements/Button";
+import { LinkButton, SendouButton } from "~/components/elements/Button";
 import { SendouDialog } from "~/components/elements/Dialog";
+import { FormWithConfirm } from "~/components/FormWithConfirm";
 import { CrossIcon } from "~/components/icons/Cross";
 import { EditIcon } from "~/components/icons/Edit";
 import { TrashIcon } from "~/components/icons/Trash";
 import { UnlinkIcon } from "~/components/icons/Unlink";
+import { Pagination } from "~/components/Pagination";
 import { useIsMounted } from "~/hooks/useIsMounted";
 import { usePagination } from "~/hooks/usePagination";
 import { useSearchParamState } from "~/hooks/useSearchParamState";
 import { databaseTimestampToDate } from "~/utils/dates";
-import {
-	artPage,
-	conditionalUserSubmittedImage,
-	newArtPage,
-	userArtPage,
-	userPage,
-} from "~/utils/urls";
+import { artPage, newArtPage, userArtPage, userPage } from "~/utils/urls";
+import { conditionalUserSubmittedImage } from "~/utils/urls-img";
 import { ResponsiveMasonry } from "../../../modules/responsive-masonry/components/ResponsiveMasonry";
 import { ART_PER_PAGE } from "../art-constants";
 import type { ListedArt } from "../art-types";
@@ -170,6 +164,7 @@ function ImagePreview({
 	const { t } = useTranslation(["common", "art"]);
 
 	const img = (
+		// biome-ignore lint/a11y/noStaticElementInteractions: Biome v2 migration
 		<img
 			alt=""
 			src={conditionalUserSubmittedImage(previewUrl(art.url))}

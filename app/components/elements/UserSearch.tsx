@@ -2,6 +2,7 @@ import { useFetcher } from "@remix-run/react";
 import clsx from "clsx";
 import * as React from "react";
 import {
+	Autocomplete,
 	Button,
 	Input,
 	type Key,
@@ -13,7 +14,6 @@ import {
 	type SelectProps,
 	SelectValue,
 } from "react-aria-components";
-import { Autocomplete } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { useDebounce } from "react-use";
 import { SendouBottomTexts } from "~/components/elements/BottomTexts";
@@ -69,6 +69,7 @@ export const UserSearch = React.forwardRef(function UserSearch<
 			placeholder=""
 			selectedKey={selectedKey}
 			onSelectionChange={onSelectionChange as (key: Key | null) => void}
+			aria-label="User search"
 			{...rest}
 		>
 			{label ? (
@@ -133,7 +134,6 @@ function UserItem({
 	if (typeof item.id === "string") {
 		return (
 			<ListBoxItem
-				id="PLACEHOLDER"
 				textValue="PLACEHOLDER"
 				isDisabled
 				className={userSearchStyles.placeholder}

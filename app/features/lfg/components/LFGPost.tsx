@@ -5,10 +5,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar } from "~/components/Avatar";
 import { Divider } from "~/components/Divider";
+import { SendouButton } from "~/components/elements/Button";
 import { Flag } from "~/components/Flag";
 import { FormWithConfirm } from "~/components/FormWithConfirm";
 import { Image, TierImage, WeaponImage } from "~/components/Image";
-import { SendouButton } from "~/components/elements/Button";
 import { EditIcon } from "~/components/icons/Edit";
 import { TrashIcon } from "~/components/icons/Trash";
 import { useUser } from "~/features/auth/core/user";
@@ -17,12 +17,8 @@ import type { TieredSkill } from "~/features/mmr/tiered.server";
 import { useIsMounted } from "~/hooks/useIsMounted";
 import { useHasRole } from "~/modules/permissions/hooks";
 import { databaseTimestampToDate } from "~/utils/dates";
-import {
-	lfgNewPostPage,
-	navIconUrl,
-	userPage,
-	userSubmittedImage,
-} from "~/utils/urls";
+import { lfgNewPostPage, navIconUrl, userPage } from "~/utils/urls";
+import { userSubmittedImage } from "~/utils/urls-img";
 import { hourDifferenceBetweenTimezones } from "../core/timezone";
 import type { LFGLoaderData, TiersMap } from "../routes/lfg";
 

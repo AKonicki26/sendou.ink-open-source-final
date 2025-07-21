@@ -7,6 +7,7 @@ import { db, sql } from "~/db/sql";
 import { ADMIN_ID } from "~/features/admin/admin-constants";
 import { SESSION_KEY } from "~/features/auth/core/authenticator.server";
 import { authSessionStorage } from "~/features/auth/core/session.server";
+import { logger } from "./logger";
 
 export function arrayContainsSameItems<T>(arr1: T[], arr2: T[]) {
 	return (
@@ -14,11 +15,25 @@ export function arrayContainsSameItems<T>(arr1: T[], arr2: T[]) {
 	);
 }
 
+/**
+ * Wraps an action function to provide a strongly-typed, reusable handler for executing actions
+ * in unit tests as if it was a normal function. The returned function allows you to pass
+ * parameters that match the schema defined by the action, and it simulates a request with
+ * authentication headers based on the provided user type.
+ *
+ * @example
+ * import { someAction } from "../actions/some.action.server";
+ *
+ * const someAction = wrappedAction<typeof someActionSchema>({ action });
+ */
 export function wrappedAction<T extends z.ZodTypeAny>({
 	action,
+	/** Is this action submitted as json (via SendouForm) */
+	isJsonSubmission = false,
 }: {
 	// TODO: strongly type this
 	action: (args: ActionFunctionArgs) => any;
+	isJsonSubmission?: boolean;
 }) {
 	return async (
 		args: z.infer<T>,
@@ -27,11 +42,21 @@ export function wrappedAction<T extends z.ZodTypeAny>({
 			params = {},
 		}: { user?: "admin" | "regular"; params?: Params<string> } = {},
 	) => {
-		const body = new URLSearchParams(args as any);
+		const body = isJsonSubmission
+			? JSON.stringify(args)
+			: new URLSearchParams(args as any);
 		const request = new Request("http://app.com/path", {
 			method: "POST",
 			body,
-			headers: await authHeader(user),
+			headers: [
+				...(await authHeader(user)),
+				[
+					"Content-Type",
+					isJsonSubmission
+						? "application/json"
+						: "application/x-www-form-urlencoded",
+				],
+			],
 		});
 
 		try {
@@ -43,6 +68,9 @@ export function wrappedAction<T extends z.ZodTypeAny>({
 
 			return response;
 		} catch (thrown) {
+			// we only log errors in vitest for failed tests so this is okay (more context)
+			logger.error("Error in wrappedAction:", thrown);
+
 			if (thrown instanceof Response) {
 				// it was a redirect
 				if (thrown.status === 302) return thrown;
@@ -64,10 +92,16 @@ export function wrappedLoader<T>({
 	return async ({
 		user,
 		params = {},
-	}: { user?: "admin" | "regular"; params?: Params<string> } = {}) => {
+	}: {
+		user?: "admin" | "regular";
+		params?: Params<string>;
+	} = {}) => {
 		const request = new Request("http://app.com/path", {
 			method: "GET",
-			headers: await authHeader(user),
+			headers: [
+				...(await authHeader(user)),
+				["Content-Type", "application/x-www-form-urlencoded"],
+			],
 		});
 
 		try {
@@ -95,13 +129,19 @@ export function wrappedLoader<T>({
  * @param message - Optional. The expected error toast message shown to the user.
  */
 export function assertResponseErrored(response: Response, message?: string) {
+	if (!response) {
+		throw new Error(`Expected a Response, got: ${response}`);
+	}
+
 	expect(response.headers.get("Location")).toContain("?__error=");
 	if (message) {
 		expect(response.headers.get("Location")).toContain(message);
 	}
 }
 
-async function authHeader(user?: "admin" | "regular"): Promise<HeadersInit> {
+async function authHeader(
+	user?: "admin" | "regular",
+): Promise<[string, string][]> {
 	if (!user) return [];
 
 	const session = await authSessionStorage.getSession();

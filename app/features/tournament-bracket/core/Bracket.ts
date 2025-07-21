@@ -9,10 +9,10 @@ import { logger } from "~/utils/logger";
 import { assertUnreachable } from "~/utils/types";
 import { cutToNDecimalPlaces } from "../../../utils/number";
 import { fillWithNullTillPowerOfTwo } from "../tournament-bracket-utils";
+import { getTournamentManager } from "./brackets-manager";
 import * as Progression from "./Progression";
 import type { OptionalIdObject, Tournament } from "./Tournament";
 import type { TournamentDataTeam } from "./Tournament.server";
-import { getTournamentManager } from "./brackets-manager";
 import type { BracketMapCounts } from "./toMapList";
 
 interface CreateBracketArgs {
@@ -214,7 +214,7 @@ export abstract class Bracket {
 			const opponent1Seed = result.get(match.opponent1.id) ?? -1;
 			const opponent2Seed = result.get(match.opponent2.id) ?? -1;
 			if (opponent1Seed === -1 || opponent2Seed === -1) {
-				console.error("opponent1Seed or opponent2Seed not found");
+				logger.error("opponent1Seed or opponent2Seed not found");
 				continue;
 			}
 
@@ -1452,18 +1452,22 @@ class SwissBracket extends Bracket {
 			placements.push(
 				...teams
 					.sort((a, b) => {
+						// TIEBREAKER 0) dropped out teams are always last
 						const aDroppedOut = droppedOutTeams.includes(a.id);
 						const bDroppedOut = droppedOutTeams.includes(b.id);
 
 						if (aDroppedOut && !bDroppedOut) return 1;
 						if (!aDroppedOut && bDroppedOut) return -1;
 
+						// TIEBREAKER 1) set wins
 						if (a.setWins > b.setWins) return -1;
 						if (a.setWins < b.setWins) return 1;
 
+						// TIEBREAKER 2) wins against tied - ensure that a team who beat more teams that are tied with them is placed higher
 						if (a.lossesAgainstTied > b.lossesAgainstTied) return 1;
 						if (a.lossesAgainstTied < b.lossesAgainstTied) return -1;
 
+						// TIEBREAKER 3) opponent set win % - how good the opponents they played against were?
 						const aOpponentSetWinPercentage = this.trackRecordToWinPercentage(
 							a.opponentSets,
 						);
@@ -1476,6 +1480,15 @@ class SwissBracket extends Bracket {
 						}
 						if (aOpponentSetWinPercentage < bOpponentSetWinPercentage) return 1;
 
+						// TIEBREAKER 4) map wins
+						if (a.mapWins > b.mapWins) return -1;
+						if (a.mapWins < b.mapWins) return 1;
+
+						// also map losses because we want a team who dropped more maps ranked lower
+						if (a.mapLosses < b.mapLosses) return -1;
+						if (a.mapLosses > b.mapLosses) return 1;
+
+						// TIEBREAKER 5) map wins against tied OW% (M) - note that this needs to be lower than map wins tiebreaker to make sure that throwing maps is not optimal
 						const aOpponentMapWinPercentage = this.trackRecordToWinPercentage(
 							a.opponentMaps,
 						);
@@ -1488,12 +1501,7 @@ class SwissBracket extends Bracket {
 						}
 						if (aOpponentMapWinPercentage < bOpponentMapWinPercentage) return 1;
 
-						if (a.mapWins > b.mapWins) return -1;
-						if (a.mapWins < b.mapWins) return 1;
-
-						if (a.mapLosses < b.mapLosses) return -1;
-						if (a.mapLosses > b.mapLosses) return 1;
-
+						// TIEBREAKER 6) initial seeding made by the TO
 						const aSeed = Number(this.tournament.teamById(a.id)?.seed);
 						const bSeed = Number(this.tournament.teamById(b.id)?.seed);
 

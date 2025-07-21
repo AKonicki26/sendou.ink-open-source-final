@@ -252,6 +252,10 @@
 	}
 }
 
+.u__season__select {
+	--select-width: 125px;
+}
+
 .u__season__weapon-container {
 	display: flex;
 	align-items: center;
@@ -340,11 +344,6 @@
 	padding-block: var(--s-0-5);
 }
 
-.u__season__match__sub-section__icon {
-	width: 18px;
-	color: var(--theme-warning);
-}
-
 .u__season__match:hover {
 	background-color: var(--theme-transparent);
 }
@@ -368,6 +367,32 @@
 	font-size: var(--fonts-xl);
 	font-weight: var(--bold);
 	margin-inline: auto;
+}
+
+.u__season__match__set-results {
+	list-style: none;
+	display: flex;
+	gap: var(--s-2);
+	flex-direction: row;
+	margin: 0 auto;
+	padding: 0;
+}
+
+.u__season__match__set-results li {
+	width: 28px;
+	height: 28px;
+	display: grid;
+	place-items: center;
+	font-size: var(--fonts-xs);
+	font-weight: var(--semi-bold);
+	border: 3px solid var(--theme);
+	border-radius: var(--rounded-sm);
+	color: var(--text);
+	border-color: var(--theme-error);
+}
+
+.u__season__match__set-results li[data-is-win="true"] {
+	border-color: var(--theme-success);
 }
 
 .u__season__info-container {

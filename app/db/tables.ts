@@ -4,7 +4,6 @@ import type {
 	Insertable,
 	JSONColumnType,
 	Selectable,
-	SqlBool,
 	Updateable,
 } from "kysely";
 import type { AssociationVisibility } from "~/features/associations/associations-types";
@@ -99,8 +98,10 @@ export interface BadgeManager {
 }
 
 export type BadgeOwner = {
-	badgeId: number | null;
-	userId: number | null;
+	badgeId: number;
+	userId: number;
+	/** Which tournament the badge is from, if null was added manually by a badge manager as opposed to once a tournament was finalized. */
+	tournamentId: number | null;
 };
 
 export interface Build {
@@ -402,6 +403,7 @@ export interface Skill {
 	season: number;
 	tournamentId: number | null;
 	userId: number | null;
+	createdAt: number | null;
 }
 
 export interface SkillTeamUser {
@@ -578,16 +580,24 @@ export interface TournamentMatchGameResult {
 export interface TournamentMatchGameResultParticipant {
 	matchGameResultId: number;
 	userId: number;
-	// it only started mattering when we added the possibility to join many teams in a tournament, null for legacy events
-	tournamentTeamId: number | null;
+	tournamentTeamId: number;
 }
 
+export type WinLossParticipationArray = Array<"W" | "L" | null>;
+
 export interface TournamentResult {
-	isHighlight: Generated<SqlBool>;
+	isHighlight: Generated<DBBoolean>;
 	participantCount: number;
 	placement: number;
 	tournamentId: number;
 	tournamentTeamId: number;
+	/**
+	 * The result of sets in the tournament.
+	 * E.g. ["W", "L", null] would mean the user won the first set, lost the second and did not play the third.
+	 * */
+	setResults: JSONColumnType<WinLossParticipationArray>;
+	/** The SP change in total after the finalization of a ranked tournament. */
+	spDiff: number | null;
 	userId: number;
 }
 
@@ -981,6 +991,8 @@ export interface ScrimPost {
 	canceledByUserId: number | null;
 	/** Reason for canceling the scrim */
 	cancelReason: string | null;
+	/** When the post was made was it scheduled for a future time slot (as opposed to looking now) */
+	isScheduledForFuture: Generated<DBBoolean>;
 	createdAt: GeneratedAlways<number>;
 	updatedAt: Generated<number>;
 }

@@ -450,7 +450,6 @@
 
 .tournament-bracket__bracket-nav__link__selected {
 	color: var(--text);
-	background-color: var(--bg);
 	background-color: var(--bg-lighter);
 }
 
@@ -561,4 +560,10 @@
 	list-style: none;
 	min-width: 275px;
 	text-align: start;
+}
+
+.finalize__badge-container {
+	padding: var(--s-2);
+	background-color: black;
+	border-radius: var(--rounded);
 }

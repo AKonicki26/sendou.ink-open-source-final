@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import * as R from "remeda";
-import type { Tables, TournamentRoundMaps } from "~/db/tables";
+import type { TournamentRoundMaps } from "~/db/tables";
+import type { TournamentBadgeReceivers } from "~/features/tournament-bracket/tournament-bracket-schemas.server";
 import type { TournamentManagerDataSet } from "~/modules/brackets-manager/types";
 import type { ModeShort, StageId } from "~/modules/in-game-lists/types";
 import type { TournamentMaplistSource } from "~/modules/tournament-map-list-generator";
@@ -8,8 +9,9 @@ import {
 	seededRandom,
 	sourceTypes,
 } from "~/modules/tournament-map-list-generator";
-import type { FindMatchById } from "../tournament-bracket/queries/findMatchById.server";
+import { logger } from "~/utils/logger";
 import type { TournamentLoaderData } from "../tournament/loaders/to.$id.server";
+import type { FindMatchById } from "../tournament-bracket/queries/findMatchById.server";
 import type { Standing } from "./core/Bracket";
 import type { Tournament } from "./core/Tournament";
 import type { TournamentDataTeam } from "./core/Tournament.server";
@@ -26,10 +28,15 @@ const NUM_MAP = {
 	"9": ["9", "6", "8"],
 	"0": ["0", "8"],
 };
-export function resolveRoomPass(matchId: Tables["TournamentMatch"]["id"]) {
+/**
+ * Generates a deterministic 4-digit Splatoon private battle room password based on the provided seed.
+ *
+ * Given the same seed, this function will always return the same password.
+ */
+export function resolveRoomPass(seed: number | string) {
 	let pass = "5";
 	for (let i = 0; i < 3; i++) {
-		const { shuffle } = seededRandom(`${matchId}-${i}`);
+		const { shuffle } = seededRandom(`${seed}-${i}`);
 
 		const key = pass[i] as keyof typeof NUM_MAP;
 		const opts = NUM_MAP[key];
@@ -55,7 +62,7 @@ export function resolveHostingTeam(
 	if (teams[0].seed < teams[1].seed) return teams[0];
 	if (teams[1].seed < teams[0].seed) return teams[1];
 
-	console.error("resolveHostingTeam: unexpected default");
+	logger.error("resolveHostingTeam: unexpected default");
 	return teams[0];
 }
 
@@ -200,7 +207,7 @@ export function pickInfoText({
 	}
 	if (map.source === "TO") return "";
 
-	console.error(`Unknown source: ${String(map.source)}`);
+	logger.error(`Unknown source: ${String(map.source)}`);
 	return "";
 }
 
@@ -302,4 +309,49 @@ export function ensureOneStandingPerUser(standings: Standing[]) {
 			},
 		};
 	});
+}
+
+/**
+ * Validates the assignment of badges to receivers in a tournament finalization context.
+ *
+ * Checks the following conditions:
+ * - Each badge receiver references a valid badge from the provided list.
+ * - Every badge has at least one assigned receiver (both team and at least one user).
+ * - No duplicate tournament team IDs exist among the badge receivers.
+ *
+ *   Returns `null` if all validations pass.
+ */
+export function validateBadgeReceivers({
+	badgeReceivers,
+	badges,
+}: {
+	badgeReceivers: TournamentBadgeReceivers;
+	badges: ReadonlyArray<{ id: number }>;
+}) {
+	if (
+		badgeReceivers.some(
+			(receiver) => !badges.some((badge) => badge.id === receiver.badgeId),
+		)
+	) {
+		return "BADGE_NOT_FOUND";
+	}
+
+	for (const badge of badges) {
+		const owner = badgeReceivers.find(
+			(receiver) => receiver.badgeId === badge.id,
+		);
+		if (!owner || owner.userIds.length === 0) {
+			return "BADGE_NOT_ASSIGNED";
+		}
+	}
+
+	const tournamentTeamIds = badgeReceivers.map(
+		(receiver) => receiver.tournamentTeamId,
+	);
+	const uniqueTournamentTeamIds = new Set(tournamentTeamIds);
+	if (tournamentTeamIds.length !== uniqueTournamentTeamIds.size) {
+		return "DUPLICATE_TOURNAMENT_TEAM_ID";
+	}
+
+	return null;
 }

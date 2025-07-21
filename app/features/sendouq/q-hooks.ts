@@ -1,9 +1,18 @@
 import * as React from "react";
 import type { MainWeaponId } from "~/modules/in-game-lists/types";
 
-const LOCAL_STORAGE_KEY = "sq__reported-weapons";
-const MAX_REPORTED_WEAPONS = 6;
+const LOCAL_STORAGE_KEY = "sq__recently-reported-weapons";
+const MAX_REPORTED_WEAPONS = 7;
 
+/**
+ * This hook provides access to the list of recently reported weapons,
+ * which is persisted in local storage, and a function to add a new weapon
+ * to the list. The list is automatically loaded from local storage when
+ * the hook is first used.
+ *
+ * If a weapon is added that already exists in the list, it will be moved to the front of the list.
+ * If the list exceeds the maximum number of reported weapons, the oldest weapon will be removed.
+ */
 export function useRecentlyReportedWeapons() {
 	const [recentlyReportedWeapons, setReportedWeapons] = React.useState<
 		MainWeaponId[]

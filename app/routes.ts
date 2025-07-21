@@ -1,7 +1,7 @@
 import {
-	type RouteConfig,
 	index,
 	prefix,
+	type RouteConfig,
 	route,
 } from "@remix-run/route-config";
 
@@ -68,7 +68,6 @@ export default [
 			":id/report-winners",
 			"features/calendar/routes/calendar.$id.report-winners.tsx",
 		),
-		route("map-pool-events", "features/calendar/routes/map-pool-events.ts"),
 	]),
 	route("/calendar.ics", "features/calendar/routes/calendar.ics.tsx"),
 
@@ -100,10 +99,19 @@ export default [
 		route("subs", "features/tournament-subs/routes/to.$id.subs.tsx"),
 		route("subs/new", "features/tournament-subs/routes/to.$id.subs.new.tsx"),
 
-		route("brackets", "features/tournament-bracket/routes/to.$id.brackets.tsx"),
 		route(
 			"divisions",
 			"features/tournament-bracket/routes/to.$id.divisions.tsx",
+		),
+		route(
+			"brackets",
+			"features/tournament-bracket/routes/to.$id.brackets.tsx",
+			[
+				route(
+					"finalize",
+					"features/tournament-bracket/routes/to.$id.brackets.finalize.tsx",
+				),
+			],
 		),
 		route(
 			"brackets/subscribe",
@@ -131,11 +139,12 @@ export default [
 	route("/support", "features/info/routes/support.tsx"),
 
 	route("/t", "features/team/routes/t.tsx"),
-	...prefix("/t/:customUrl", [
-		index("features/team/routes/t.$customUrl.tsx"),
+	route("/t/:customUrl", "features/team/routes/t.$customUrl.tsx", [
+		index("features/team/routes/t.$customUrl.index.tsx"),
 		route("edit", "features/team/routes/t.$customUrl.edit.tsx"),
 		route("roster", "features/team/routes/t.$customUrl.roster.tsx"),
 		route("join", "features/team/routes/t.$customUrl.join.tsx"),
+		route("results", "features/team/routes/t.$customUrl.results.tsx"),
 	]),
 
 	...prefix("/vods", [

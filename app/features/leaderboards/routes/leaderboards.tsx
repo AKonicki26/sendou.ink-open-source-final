@@ -19,8 +19,8 @@ import {
 	topSearchPlayerPage,
 	userPage,
 	userSeasonsPage,
-	userSubmittedImage,
 } from "~/utils/urls";
+import { userSubmittedImage } from "~/utils/urls-img";
 import { InfoPopover } from "../../../components/InfoPopover";
 import { TopTenPlayer } from "../components/TopTenPlayer";
 import {
@@ -29,9 +29,8 @@ import {
 	TYPE_SEARCH_PARAM_KEY,
 } from "../leaderboards-constants";
 import { seasonHasTopTen } from "../leaderboards-utils";
-import type { XPLeaderboardItem } from "../queries/XPLeaderboard.server";
-
 import { loader } from "../loaders/leaderboards.server";
+import type { XPLeaderboardItem } from "../queries/XPLeaderboard.server";
 export { loader };
 
 import "../../top-search/top-search.css";

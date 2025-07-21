@@ -1,8 +1,8 @@
-import type { SerializeFrom } from "@remix-run/node";
 import {
 	Link,
 	useLoaderData,
 	useMatches,
+	useNavigate,
 	useSearchParams,
 } from "@remix-run/react";
 import clsx from "clsx";
@@ -10,6 +10,20 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar } from "~/components/Avatar";
 import Chart from "~/components/Chart";
+import { SendouButton } from "~/components/elements/Button";
+import { SendouDialog } from "~/components/elements/Dialog";
+import { SendouPopover } from "~/components/elements/Popover";
+import {
+	SendouSelect,
+	SendouSelectItem,
+	SendouSelectItemSection,
+} from "~/components/elements/Select";
+import {
+	SendouTab,
+	SendouTabList,
+	SendouTabPanel,
+	SendouTabs,
+} from "~/components/elements/Tabs";
 import {
 	ModeImage,
 	StageImage,
@@ -18,19 +32,15 @@ import {
 } from "~/components/Image";
 import { Pagination } from "~/components/Pagination";
 import { SubNav, SubNavLink } from "~/components/SubNav";
-import { SendouButton } from "~/components/elements/Button";
-import { SendouPopover } from "~/components/elements/Popover";
-import {
-	SendouTab,
-	SendouTabList,
-	SendouTabPanel,
-	SendouTabs,
-} from "~/components/elements/Tabs";
-import { AlertIcon } from "~/components/icons/Alert";
 import { TopTenPlayer } from "~/features/leaderboards/components/TopTenPlayer";
 import { playerTopTenPlacement } from "~/features/leaderboards/leaderboards-utils";
 import * as Seasons from "~/features/mmr/core/Seasons";
 import { ordinalToSp } from "~/features/mmr/mmr-utils";
+import type {
+	SeasonGroupMatch,
+	SeasonTournamentResult,
+} from "~/features/sendouq-match/QMatchRepository.server";
+import { HACKY_resolvePicture } from "~/features/tournament/tournament-utils";
 import { useWeaponUsage } from "~/hooks/swr";
 import { useIsMounted } from "~/hooks/useIsMounted";
 import { modesShort } from "~/modules/in-game-lists/modes";
@@ -41,9 +51,17 @@ import { databaseTimestampToDate } from "~/utils/dates";
 import invariant from "~/utils/invariant";
 import { cutToNDecimalPlaces, roundToNDecimalPlaces } from "~/utils/number";
 import type { SendouRouteHandle } from "~/utils/remix.server";
-import { TIERS_PAGE, sendouQMatchPage, userSeasonsPage } from "~/utils/urls";
-
-import { loader } from "../loaders/u.$identifier.seasons.server";
+import {
+	sendouQMatchPage,
+	TIERS_PAGE,
+	tournamentTeamPage,
+	userSeasonsPage,
+} from "~/utils/urls";
+import { userSubmittedImage } from "~/utils/urls-img";
+import {
+	loader,
+	type UserSeasonsPageLoaderData,
+} from "../loaders/u.$identifier.seasons.server";
 import type { UserPageLoaderData } from "../loaders/u.$identifier.server";
 export { loader };
 
@@ -56,13 +74,21 @@ export default function UserSeasonsPage() {
 	const { t } = useTranslation(["user"]);
 	const data = useLoaderData<typeof loader>();
 
-	const tabLink = (tab: string) =>
-		`?info=${tab}&page=${data.matches.currentPage}&season=${data.season}`;
+	if (!data) {
+		return (
+			<div className="text-lg text-lighter font-semi-bold text-center mt-2">
+				{t("user:seasons.noSeasons")}
+			</div>
+		);
+	}
 
-	if (data.matches.value.length === 0) {
+	if (data.results.value.length === 0) {
 		return (
 			<div className="stack lg half-width">
-				<SeasonHeader />
+				<SeasonHeader
+					seasonViewed={data.season}
+					seasonsParticipatedIn={data.seasonsParticipatedIn}
+				/>
 				<div className="text-lg text-lighter font-semi-bold text-center mt-2">
 					{t("user:seasons.noQ")}
 				</div>
@@ -70,17 +96,29 @@ export default function UserSeasonsPage() {
 		);
 	}
 
+	const tabLink = (tab: string) =>
+		`?info=${tab}&page=${data.results.currentPage}&season=${data.season}`;
+
 	return (
 		<div className="stack lg half-width">
-			<SeasonHeader />
+			<SeasonHeader
+				seasonViewed={data.season}
+				seasonsParticipatedIn={data.seasonsParticipatedIn}
+			/>
 			{data.currentOrdinal ? (
 				<div className="stack md">
-					<Rank currentOrdinal={data.currentOrdinal} />
+					<Rank
+						currentOrdinal={data.currentOrdinal}
+						seasonViewed={data.season}
+						isAccurateTiers={data.isAccurateTiers}
+						skills={data.skills}
+						tier={data.tier}
+					/>
 					{data.winrates.maps.wins + data.winrates.maps.losses > 0 ? (
-						<Winrates />
+						<Winrates winrates={data.winrates} />
 					) : null}
 					{data.skills.length >= DAYS_WITH_SKILL_NEEDED_TO_SHOW_POWER_CHART ? (
-						<PowerChart />
+						<PowerChart skills={data.skills} />
 					) : null}
 				</div>
 			) : null}
@@ -121,48 +159,65 @@ export default function UserSeasonsPage() {
 				</SubNav>
 				<div className="u__season__info-container">
 					{data.info.weapons ? <Weapons weapons={data.info.weapons} /> : null}
-					{data.info.stages ? <Stages stages={data.info.stages} /> : null}
-					{data.info.players ? <Players players={data.info.players} /> : null}
+					{data.info.stages ? (
+						<Stages stages={data.info.stages} seasonViewed={data.season} />
+					) : null}
+					{data.info.players ? (
+						<Players players={data.info.players} seasonViewed={data.season} />
+					) : null}
 				</div>
 			</div>
-			<Matches />
+			{data.canceled ? (
+				<CanceledMatchesDialog canceledMatches={data.canceled} />
+			) : null}
+			<Results results={data.results} seasonViewed={data.season} />
 		</div>
 	);
 }
 
-function SeasonHeader() {
+function SeasonHeader({
+	seasonViewed,
+	seasonsParticipatedIn,
+}: {
+	seasonViewed: number;
+	seasonsParticipatedIn: number[];
+}) {
 	const { t, i18n } = useTranslation(["user"]);
-	const data = useLoaderData<typeof loader>();
 	const isMounted = useIsMounted();
-	const { starts, ends } = Seasons.nthToDateRange(data.season);
+	const { starts, ends } = Seasons.nthToDateRange(seasonViewed);
+	const navigate = useNavigate();
+	const options = useSeasonSelectOptions();
 
 	const isDifferentYears =
 		new Date(starts).getFullYear() !== new Date(ends).getFullYear();
 
 	return (
 		<div>
-			<div className="stack horizontal xs">
-				{Seasons.allStarted().map((s) => {
-					const isActive = s === data.season;
-
-					return (
-						<Link
-							to={`?season=${s}`}
-							key={s}
-							className={clsx("text-xl font-bold", {
-								"text-lighter": !isActive,
-								"text-main-forced": isActive,
-							})}
-						>
-							{isActive
-								? `${t("user:seasons.season")} `
-								: t("user:seasons.season.short")}
-							{s}
-						</Link>
-					);
-				})}
-			</div>
-			<div className={clsx("text-sm text-lighter", { invisible: !isMounted })}>
+			<SendouSelect
+				label={t("user:seasons.season")}
+				selectedKey={seasonViewed}
+				onSelectionChange={(seasonNth) => navigate(`?season=${seasonNth}`)}
+				items={options}
+				className="u__season__select"
+				popoverClassName="u__season__select"
+			>
+				{({ year, items, key }) => (
+					<SendouSelectItemSection heading={year} key={key}>
+						{items.map((item) => (
+							<SendouSelectItem
+								key={item.key}
+								id={item.seasonNth}
+								isDisabled={!seasonsParticipatedIn.includes(item.seasonNth)}
+							>
+								{item.name}
+							</SendouSelectItem>
+						))}
+					</SendouSelectItemSection>
+				)}
+			</SendouSelect>
+			<div
+				className={clsx("text-sm text-lighter mt-2", { invisible: !isMounted })}
+			>
 				{isMounted ? (
 					<>
 						{new Date(starts).toLocaleString(i18n.language, {
@@ -185,9 +240,42 @@ function SeasonHeader() {
 	);
 }
 
-function Winrates() {
+function useSeasonSelectOptions() {
 	const { t } = useTranslation(["user"]);
-	const data = useLoaderData<typeof loader>();
+
+	const seasonSelectItems = Seasons.allStarted().map((seasonNth) => ({
+		seasonNth,
+		key: seasonNth,
+		name: `${t("user:seasons.season")} ${seasonNth}`,
+	}));
+
+	const groupedSeasonItems = seasonSelectItems.reduce(
+		(acc, item) => {
+			const year = Seasons.nthToDateRange(item.seasonNth).starts.getFullYear();
+			if (!acc[year]) {
+				acc[year] = [];
+			}
+			acc[year].push(item);
+			return acc;
+		},
+		{} as Record<number, typeof seasonSelectItems>,
+	);
+
+	return Object.entries(groupedSeasonItems)
+		.sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
+		.map(([year, items]) => ({
+			year,
+			items: items.sort((a, b) => b.seasonNth - a.seasonNth),
+			key: year,
+		}));
+}
+
+function Winrates({
+	winrates,
+}: {
+	winrates: UserSeasonsPageLoaderData["winrates"];
+}) {
+	const { t } = useTranslation(["user"]);
 
 	const winrate = (wins: number, losses: number) =>
 		Math.round((wins / (wins + losses)) * 100);
@@ -195,48 +283,57 @@ function Winrates() {
 	return (
 		<div className="stack horizontal sm">
 			<div className="u__season__winrate">
-				<span className="text-theme text-xxs">Sets</span>{" "}
-				{data.winrates.sets.wins}
-				{t("user:seasons.win.short")} {data.winrates.sets.losses}
+				<span className="text-theme text-xxs">Sets</span> {winrates.sets.wins}
+				{t("user:seasons.win.short")} {winrates.sets.losses}
 				{t("user:seasons.loss.short")} (
-				{winrate(data.winrates.sets.wins, data.winrates.sets.losses)}%)
+				{winrate(winrates.sets.wins, winrates.sets.losses)}%)
 			</div>
 			<div className="u__season__winrate">
-				<span className="text-theme text-xxs">Maps</span>{" "}
-				{data.winrates.maps.wins}
-				{t("user:seasons.win.short")} {data.winrates.maps.losses}
+				<span className="text-theme text-xxs">Maps</span> {winrates.maps.wins}
+				{t("user:seasons.win.short")} {winrates.maps.losses}
 				{t("user:seasons.loss.short")} (
-				{winrate(data.winrates.maps.wins, data.winrates.maps.losses)}%)
+				{winrate(winrates.maps.wins, winrates.maps.losses)}%)
 			</div>
 		</div>
 	);
 }
 
-function Rank({ currentOrdinal }: { currentOrdinal: number }) {
+function Rank({
+	currentOrdinal,
+	seasonViewed,
+	tier,
+	isAccurateTiers,
+	skills,
+}: {
+	currentOrdinal: number;
+	seasonViewed: number;
+	tier: UserSeasonsPageLoaderData["tier"];
+	isAccurateTiers: UserSeasonsPageLoaderData["isAccurateTiers"];
+	skills: UserSeasonsPageLoaderData["skills"];
+}) {
 	const { t } = useTranslation(["user"]);
-	const data = useLoaderData<typeof loader>();
 	const [, parentRoute] = useMatches();
 	invariant(parentRoute);
 	const layoutData = parentRoute.data as UserPageLoaderData;
 
-	const maxOrdinal = Math.max(...data.skills.map((s) => s.ordinal));
+	const maxOrdinal = Math.max(...skills.map((s) => s.ordinal));
 
 	const peakAndCurrentSame = currentOrdinal === maxOrdinal;
 
 	const topTenPlacement = playerTopTenPlacement({
-		season: data.season,
+		season: seasonViewed,
 		userId: layoutData.user.id,
 	});
 
 	return (
 		<div className="stack horizontal items-center justify-center sm">
-			<TierImage tier={data.tier} />
+			<TierImage tier={tier} />
 			<div>
 				<Link to={TIERS_PAGE} className="text-xl font-bold">
-					{data.tier.name}
-					{data.tier.isPlus ? "+" : ""}
+					{tier.name}
+					{tier.isPlus ? "+" : ""}
 				</Link>
-				{!data.isAccurateTiers ? (
+				{!isAccurateTiers ? (
 					<div className="u__season__tentative">
 						{t("user:seasons.tentative")}{" "}
 						<SendouPopover
@@ -263,7 +360,7 @@ function Rank({ currentOrdinal }: { currentOrdinal: number }) {
 					<TopTenPlayer
 						small
 						placement={topTenPlacement}
-						season={data.season}
+						season={seasonViewed}
 					/>
 				) : null}
 			</div>
@@ -271,14 +368,16 @@ function Rank({ currentOrdinal }: { currentOrdinal: number }) {
 	);
 }
 
-function PowerChart() {
-	const data = useLoaderData<typeof loader>();
-
+function PowerChart({
+	skills,
+}: {
+	skills: UserSeasonsPageLoaderData["skills"];
+}) {
 	const chartOptions = React.useMemo(() => {
 		return [
 			{
 				label: "SP",
-				data: data.skills.map((s) => {
+				data: skills.map((s) => {
 					return {
 						primary: new Date(s.date),
 						secondary: ordinalToSp(s.ordinal),
@@ -286,7 +385,7 @@ function PowerChart() {
 				}),
 			},
 		];
-	}, [data]);
+	}, [skills]);
 
 	return <Chart options={chartOptions as any} xAxis="localTime" />;
 }
@@ -296,7 +395,7 @@ const WEAPONS_TO_SHOW = 9;
 function Weapons({
 	weapons,
 }: {
-	weapons: NonNullable<SerializeFrom<typeof loader>["info"]["weapons"]>;
+	weapons: NonNullable<UserSeasonsPageLoaderData["info"]["weapons"]>;
 }) {
 	const { t } = useTranslation(["user", "weapons"]);
 
@@ -345,11 +444,12 @@ function Weapons({
 }
 
 function Stages({
+	seasonViewed,
 	stages,
 }: {
-	stages: NonNullable<SerializeFrom<typeof loader>["info"]["stages"]>;
+	seasonViewed: number;
+	stages: NonNullable<UserSeasonsPageLoaderData["info"]["stages"]>;
 }) {
-	const data = useLoaderData<typeof loader>();
 	const { t } = useTranslation(["user", "game-misc"]);
 	const layoutData = atOrError(useMatches(), -2).data as UserPageLoaderData;
 
@@ -390,7 +490,7 @@ function Stages({
 								>
 									<StageWeaponUsageStats
 										modeShort={mode}
-										season={data.season}
+										season={seasonViewed}
 										stageId={id}
 										userId={layoutData.user.id}
 									/>
@@ -493,11 +593,12 @@ function StageWeaponUsageStats(props: {
 
 function Players({
 	players,
+	seasonViewed,
 }: {
-	players: NonNullable<SerializeFrom<typeof loader>["info"]["players"]>;
+	players: NonNullable<UserSeasonsPageLoaderData["info"]["players"]>;
+	seasonViewed: number;
 }) {
 	const { t } = useTranslation(["user"]);
-	const data = useLoaderData<typeof loader>();
 
 	return (
 		<div className="stack md horizontal justify-center flex-wrap">
@@ -511,7 +612,7 @@ function Players({
 				return (
 					<div key={player.user.id} className="stack">
 						<Link
-							to={userSeasonsPage({ user: player.user, season: data.season })}
+							to={userSeasonsPage({ user: player.user, season: seasonViewed })}
 							className="u__season__player-name"
 						>
 							<Avatar user={player.user} size="xs" className="mx-auto" />
@@ -562,22 +663,59 @@ function WeaponCircle({
 	);
 }
 
-function Matches() {
+/** Dialog for staff view all season's canceled matches per user */
+function CanceledMatchesDialog({
+	canceledMatches,
+}: {
+	canceledMatches: NonNullable<UserSeasonsPageLoaderData["canceled"]>;
+}) {
+	return (
+		<SendouDialog
+			trigger={
+				<SendouButton
+					variant="minimal"
+					isDisabled={canceledMatches.length === 0}
+				>
+					Canceled Matches ({canceledMatches.length})
+				</SendouButton>
+			}
+			heading="Season's canceled matches for this user"
+		>
+			<div className="stack lg">
+				{canceledMatches.map((match) => (
+					<div key={match.id}>
+						<Link to={sendouQMatchPage(match.id)}>#{match.id}</Link>
+						<div>
+							{databaseTimestampToDate(match.createdAt).toLocaleString()}
+						</div>
+					</div>
+				))}
+			</div>
+		</SendouDialog>
+	);
+}
+
+function Results({
+	seasonViewed,
+	results,
+}: {
+	seasonViewed: number;
+	results: UserSeasonsPageLoaderData["results"];
+}) {
 	const isMounted = useIsMounted();
-	const data = useLoaderData<typeof loader>();
 	const [, setSearchParams] = useSearchParams();
 	const ref = React.useRef<HTMLDivElement>(null);
 
 	const setPage = (page: number) => {
-		setSearchParams({ page: String(page), season: String(data.season) });
+		setSearchParams({ page: String(page), season: String(seasonViewed) });
 	};
 
 	React.useEffect(() => {
-		if (data.matches.currentPage === 1) return;
+		if (results.currentPage === 1) return;
 		ref.current?.scrollIntoView({
 			block: "center",
 		});
-	}, [data.matches.currentPage]);
+	}, [results.currentPage]);
 
 	let lastDayRendered: number | null = null;
 	return (
@@ -585,13 +723,13 @@ function Matches() {
 			<div ref={ref} />
 			<div className="stack lg">
 				<div className="stack">
-					{data.matches.value.map((match) => {
-						const day = databaseTimestampToDate(match.createdAt).getDate();
+					{results.value.map((result) => {
+						const day = databaseTimestampToDate(result.createdAt).getDate();
 						const shouldRenderDateHeader = day !== lastDayRendered;
 						lastDayRendered = day;
 
 						return (
-							<React.Fragment key={match.id}>
+							<React.Fragment key={result.id}>
 								<div
 									className={clsx(
 										"text-xs font-semi-bold text-theme-secondary",
@@ -601,7 +739,7 @@ function Matches() {
 									)}
 								>
 									{isMounted
-										? databaseTimestampToDate(match.createdAt).toLocaleString(
+										? databaseTimestampToDate(result.createdAt).toLocaleString(
 												"en",
 												{
 													weekday: "long",
@@ -611,17 +749,21 @@ function Matches() {
 											)
 										: "t"}
 								</div>
-								<Match match={match} />
+								{result.type === "GROUP_MATCH" ? (
+									<GroupMatchResult match={result.groupMatch} />
+								) : (
+									<TournamentResult result={result.tournamentResult} />
+								)}
 							</React.Fragment>
 						);
 					})}
 				</div>
-				{data.matches.pages > 1 ? (
+				{results.pages > 1 ? (
 					<Pagination
-						currentPage={data.matches.currentPage}
-						pagesCount={data.matches.pages}
-						nextPage={() => setPage(data.matches.currentPage + 1)}
-						previousPage={() => setPage(data.matches.currentPage - 1)}
+						currentPage={results.currentPage}
+						pagesCount={results.pages}
+						nextPage={() => setPage(results.currentPage + 1)}
+						previousPage={() => setPage(results.currentPage - 1)}
 						setPage={(page) => setPage(page)}
 					/>
 				) : null}
@@ -630,28 +772,15 @@ function Matches() {
 	);
 }
 
-function Match({
-	match,
-}: {
-	match: SerializeFrom<typeof loader>["matches"]["value"][0];
-}) {
-	const { t } = useTranslation(["user"]);
+function GroupMatchResult({ match }: { match: SeasonGroupMatch }) {
 	const [, parentRoute] = useMatches();
 	invariant(parentRoute);
 	const layoutData = parentRoute.data as UserPageLoaderData;
 	const userId = layoutData.user.id;
 
-	const score = match.winnerGroupIds.reduce(
-		(acc, cur) => [
-			acc[0] + (cur === match.alphaGroupId ? 1 : 0),
-			acc[1] + (cur === match.bravoGroupId ? 1 : 0),
-		],
-		[0, 0],
-	);
-
 	// score when match has not yet been played or was canceled
 	const specialScoreMarking = () => {
-		if (score[0] + score[1] === 0) return match.isLocked ? "-" : " ";
+		if (match.score[0] + match.score[1] === 0) return " ";
 
 		return null;
 	};
@@ -666,13 +795,13 @@ function Match({
 				<MatchMembersRow
 					key="alpha"
 					members={match.groupAlphaMembers}
-					score={specialScoreMarking() ?? score[0]}
+					score={specialScoreMarking() ?? match.score[0]}
 					reserveWeaponSpace={reserveWeaponSpace}
 				/>,
 				<MatchMembersRow
 					key="bravo"
 					members={match.groupBravoMembers}
-					score={specialScoreMarking() ?? score[1]}
+					score={specialScoreMarking() ?? match.score[1]}
 					reserveWeaponSpace={reserveWeaponSpace}
 				/>,
 			]
@@ -680,13 +809,13 @@ function Match({
 				<MatchMembersRow
 					key="bravo"
 					members={match.groupBravoMembers}
-					score={specialScoreMarking() ?? score[1]}
+					score={specialScoreMarking() ?? match.score[1]}
 					reserveWeaponSpace={reserveWeaponSpace}
 				/>,
 				<MatchMembersRow
 					key="alpha"
 					members={match.groupAlphaMembers}
-					score={specialScoreMarking() ?? score[0]}
+					score={specialScoreMarking() ?? match.score[0]}
 					reserveWeaponSpace={reserveWeaponSpace}
 				/>,
 			];
@@ -696,8 +825,7 @@ function Match({
 			<Link
 				to={sendouQMatchPage(match.id)}
 				className={clsx("u__season__match", {
-					"u__season__match__with-sub-section ":
-						match.spDiff || !match.isLocked,
+					"u__season__match__with-sub-section ": match.spDiff,
 				})}
 			>
 				{rows}
@@ -712,10 +840,49 @@ function Match({
 					{Math.abs(roundToNDecimalPlaces(match.spDiff))}SP
 				</div>
 			) : null}
-			{!match.isLocked ? (
+		</div>
+	);
+}
+
+function TournamentResult({ result }: { result: SeasonTournamentResult }) {
+	const logoUrl = result.logoUrl
+		? userSubmittedImage(result.logoUrl)
+		: HACKY_resolvePicture({ name: result.tournamentName });
+
+	return (
+		<div data-testid="seasons-tournament-result">
+			<Link
+				to={tournamentTeamPage(result)}
+				className={clsx("u__season__match", {
+					"u__season__match__with-sub-section ": result.spDiff,
+				})}
+			>
+				<div className="stack font-bold items-center text-lg text-center">
+					<img
+						src={logoUrl}
+						width={36}
+						height={36}
+						alt=""
+						className="rounded-full"
+					/>
+					{result.tournamentName}
+				</div>
+				<ul className="u__season__match__set-results">
+					{result.setResults.filter(Boolean).map((result, i) => (
+						<li key={i} data-is-win={String(result === "W")}>
+							{result}
+						</li>
+					))}
+				</ul>
+			</Link>
+			{result.spDiff ? (
 				<div className="u__season__match__sub-section">
-					<AlertIcon className="u__season__match__sub-section__icon" />
-					{t("user:seasons.matchBeingProcessed")}
+					{result.spDiff > 0 ? (
+						<span className="text-success">▲</span>
+					) : (
+						<span className="text-warning">▼</span>
+					)}
+					{Math.abs(roundToNDecimalPlaces(result.spDiff))}SP
 				</div>
 			) : null}
 		</div>
@@ -728,9 +895,7 @@ function MatchMembersRow({
 	reserveWeaponSpace,
 }: {
 	score: React.ReactNode;
-	members: SerializeFrom<
-		typeof loader
-	>["matches"]["value"][0]["groupAlphaMembers"];
+	members: SeasonGroupMatch["groupAlphaMembers"];
 	reserveWeaponSpace: boolean;
 }) {
 	return (

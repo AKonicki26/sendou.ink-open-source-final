@@ -3,10 +3,10 @@ import { Link, useLoaderData } from "@remix-run/react";
 import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import { Avatar } from "~/components/Avatar";
-import { ModeImage, StageImage } from "~/components/Image";
-import { Placement } from "~/components/Placement";
 import { SendouButton } from "~/components/elements/Button";
 import { SendouPopover } from "~/components/elements/Popover";
+import { ModeImage, StageImage } from "~/components/Image";
+import { Placement } from "~/components/Placement";
 import type {
 	TournamentData,
 	TournamentDataTeam,
@@ -18,13 +18,13 @@ import {
 	tournamentMatchPage,
 	tournamentTeamPage,
 	userPage,
-	userSubmittedImage,
 } from "~/utils/urls";
+import { userSubmittedImage } from "~/utils/urls-img";
 import { TeamWithRoster } from "../components/TeamWithRoster";
+import * as Standings from "../core/Standings";
 import type { PlayedSet } from "../core/sets.server";
-import { useTournament } from "./to.$id";
-
 import { loader } from "../loaders/to.$id.teams.$tid.server";
+import { useTournament } from "./to.$id";
 export { loader };
 
 export const meta: MetaFunction<typeof loader> = (args) => {
@@ -107,7 +107,7 @@ function StatSquares({
 	const data = useLoaderData<typeof loader>();
 	const tournament = useTournament();
 
-	const placement = tournament.standings.find(
+	const placement = Standings.tournamentStandings(tournament).find(
 		(s) => s.team.id === data.tournamentTeamId,
 	)?.placement;
 
@@ -197,7 +197,7 @@ function SetInfo({ set, team }: { set: PlayedSet; team: TournamentDataTeam }) {
 	};
 
 	const { bracketName, roundNameWithoutMatchIdentifier } =
-		tournament.matchNameById(set.tournamentMatchId);
+		tournament.matchContextNamesById(set.tournamentMatchId);
 
 	return (
 		<div className="tournament__team__set">

@@ -1,4 +1,4 @@
-import { useRevalidator } from "@remix-run/react";
+import { Outlet, useOutletContext, useRevalidator } from "@remix-run/react";
 import clsx from "clsx";
 import { sub } from "date-fns";
 import * as React from "react";
@@ -8,8 +8,7 @@ import { useCopyToClipboard } from "react-use";
 import { useEventSource } from "remix-utils/sse/react";
 import { Alert } from "~/components/Alert";
 import { Divider } from "~/components/Divider";
-import { FormWithConfirm } from "~/components/FormWithConfirm";
-import { SendouButton } from "~/components/elements/Button";
+import { LinkButton, SendouButton } from "~/components/elements/Button";
 import { SendouMenu, SendouMenuItem } from "~/components/elements/Menu";
 import { SendouPopover } from "~/components/elements/Popover";
 import { CheckmarkIcon } from "~/components/icons/Checkmark";
@@ -31,14 +30,13 @@ import {
 	useTournament,
 	useTournamentPreparedMaps,
 } from "../../tournament/routes/to.$id";
+import { action } from "../actions/to.$id.brackets.server";
 import { Bracket } from "../components/Bracket";
 import { BracketMapListDialog } from "../components/BracketMapListDialog";
 import { TournamentTeamActions } from "../components/TournamentTeamActions";
 import type { Bracket as BracketType } from "../core/Bracket";
 import * as PreparedMaps from "../core/PreparedMaps";
 import { bracketSubscriptionKey } from "../tournament-bracket-utils";
-
-import { action } from "../actions/to.$id.brackets.server";
 export { action };
 
 import "../components/Bracket/bracket.css";
@@ -51,6 +49,7 @@ export default function TournamentBracketsPage() {
 	const user = useUser();
 	const tournament = useTournament();
 	const isMounted = useIsMounted();
+	const ctx = useOutletContext();
 
 	const defaultBracketIdx = () => {
 		if (
@@ -160,24 +159,19 @@ export default function TournamentBracketsPage() {
 
 	return (
 		<div>
+			<Outlet context={ctx} />
 			{visibility !== "hidden" && !tournament.everyBracketOver ? (
 				<AutoRefresher />
 			) : null}
 			{tournament.canFinalize(user) ? (
 				<div className="tournament-bracket__finalize">
-					<FormWithConfirm
-						dialogHeading={t("tournament:actions.finalize.confirm")}
-						fields={[["_action", "FINALIZE_TOURNAMENT"]]}
-						submitButtonText={t("tournament:actions.finalize.action")}
-						submitButtonVariant="outlined"
+					<LinkButton
+						variant="minimal"
+						testId="finalize-tournament-button"
+						to="finalize"
 					>
-						<SendouButton
-							variant="minimal"
-							data-testid="finalize-tournament-button"
-						>
-							{t("tournament:actions.finalize.question")}
-						</SendouButton>
-					</FormWithConfirm>
+						{t("tournament:actions.finalize.question")}
+					</LinkButton>
 				</div>
 			) : null}
 			{bracket.preview &&
@@ -200,13 +194,11 @@ export default function TournamentBracketsPage() {
 						{!bracket.canBeStarted ? (
 							<div className="tournament-bracket__mini-alert">
 								⚠️{" "}
-								{bracketIdx === 0 ? (
-									<>Tournament start time is in the future</>
-								) : bracket.startTime && bracket.startTime > new Date() ? (
-									<>Bracket start time is in the future</>
-								) : (
-									<>Teams pending from the previous bracket</>
-								)}{" "}
+								{bracketIdx === 0
+									? "Tournament start time is in the future"
+									: bracket.startTime && bracket.startTime > new Date()
+										? "Bracket start time is in the future"
+										: "Teams pending from the previous bracket"}{" "}
 								(blocks starting)
 							</div>
 						) : null}

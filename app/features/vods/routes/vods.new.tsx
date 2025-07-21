@@ -1,5 +1,4 @@
 import { useLoaderData } from "@remix-run/react";
-import * as React from "react";
 import {
 	Controller,
 	get,
@@ -9,18 +8,17 @@ import {
 } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod/v4";
-import { WeaponCombobox } from "~/components/Combobox";
-import { FormMessage } from "~/components/FormMessage";
-import { Label } from "~/components/Label";
-import { Main } from "~/components/Main";
 import { SendouButton } from "~/components/elements/Button";
 import { UserSearch } from "~/components/elements/UserSearch";
+import { FormMessage } from "~/components/FormMessage";
 import { AddFieldButton } from "~/components/form/AddFieldButton";
 import { RemoveFieldButton } from "~/components/form/RemoveFieldButton";
+import { Label } from "~/components/Label";
+import { Main } from "~/components/Main";
+import { WeaponSelect } from "~/components/WeaponSelect";
 import type { Tables } from "~/db/tables";
 import { modesShort } from "~/modules/in-game-lists/modes";
 import { stageIds } from "~/modules/in-game-lists/stage-ids";
-import type { MainWeaponId } from "~/modules/in-game-lists/types";
 import { useHasRole } from "~/modules/permissions/hooks";
 import type { SendouRouteHandle } from "~/utils/remix.server";
 import { Alert } from "../../../components/Alert";
@@ -28,11 +26,10 @@ import { DateFormField } from "../../../components/form/DateFormField";
 import { InputFormField } from "../../../components/form/InputFormField";
 import { SelectFormField } from "../../../components/form/SelectFormField";
 import { SendouForm } from "../../../components/form/SendouForm";
-import { videoMatchTypes } from "../vods-constants";
-import { videoInputSchema } from "../vods-schemas";
-
 import { action } from "../actions/vods.new.server";
 import { loader } from "../loaders/vods.new.server";
+import { videoMatchTypes } from "../vods-constants";
+import { videoInputSchema } from "../vods-schemas";
 export { action, loader };
 
 export const handle: SendouRouteHandle = {
@@ -148,6 +145,7 @@ function PovFormField() {
 				field: { onChange, onBlur, value },
 				fieldState: { error },
 			}) => {
+				// biome-ignore lint/complexity/noUselessFragments: Biome upgrade
 				if (!value) return <></>;
 
 				const asPlainInput = value.type === "NAME";
@@ -218,7 +216,9 @@ function PovFormField() {
 
 function MatchesFormfield({
 	videoType,
-}: { videoType: Tables["Video"]["type"] }) {
+}: {
+	videoType: Tables["Video"]["type"];
+}) {
 	const {
 		formState: { errors },
 	} = useFormContext<VodFormFields>();
@@ -266,7 +266,6 @@ function MatchesFieldset({
 	canRemove: boolean;
 	videoType: Tables["Video"]["type"];
 }) {
-	const id = React.useId();
 	const { t } = useTranslation(["vods", "game-misc"]);
 
 	return (
@@ -317,16 +316,14 @@ function MatchesFieldset({
 									<div className="stack sm">
 										{new Array(4).fill(null).map((_, i) => {
 											return (
-												<WeaponCombobox
+												<WeaponSelect
 													key={i}
-													required
-													fullWidth
-													inputName={`player-${i}-weapon`}
-													initialWeaponId={value[i]}
-													onChange={(selected) => {
-														if (!selected) return;
+													isRequired
+													testId={`player-${i}-weapon`}
+													value={value[i] ?? null}
+													onChange={(weaponId) => {
 														const weapons = [...value];
-														weapons[i] = Number(selected.value) as MainWeaponId;
+														weapons[i] = weaponId;
 
 														onChange(weapons);
 													}}
@@ -342,18 +339,14 @@ function MatchesFieldset({
 											{new Array(4).fill(null).map((_, i) => {
 												const adjustedI = i + 4;
 												return (
-													<WeaponCombobox
+													<WeaponSelect
 														key={i}
-														required
-														fullWidth
-														inputName={`player-${adjustedI}-weapon`}
-														initialWeaponId={value[adjustedI]}
-														onChange={(selected) => {
-															if (!selected) return;
+														isRequired
+														testId={`player-${adjustedI}-weapon`}
+														value={value[adjustedI] ?? null}
+														onChange={(weaponId) => {
 															const weapons = [...value];
-															weapons[adjustedI] = Number(
-																selected.value,
-															) as MainWeaponId;
+															weapons[adjustedI] = weaponId;
 
 															onChange(weapons);
 														}}
@@ -364,25 +357,13 @@ function MatchesFieldset({
 									</div>
 								</div>
 							) : (
-								<>
-									<Label required htmlFor={id}>
-										{t("vods:forms.title.weapon")}
-									</Label>
-									<WeaponCombobox
-										id={id}
-										required
-										fullWidth
-										inputName={`match-${idx}-weapon`}
-										initialWeaponId={value[0]}
-										onChange={(selected) =>
-											onChange(
-												selected?.value
-													? [Number(selected.value) as MainWeaponId]
-													: [],
-											)
-										}
-									/>
-								</>
+								<WeaponSelect
+									label={t("vods:forms.title.weapon")}
+									isRequired
+									testId={`match-${idx}-weapon`}
+									value={value[0] ?? null}
+									onChange={(weaponId) => onChange([weaponId])}
+								/>
 							)}
 						</div>
 					);

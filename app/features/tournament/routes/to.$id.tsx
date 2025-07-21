@@ -20,11 +20,11 @@ import {
 	tournamentOrganizationPage,
 	tournamentPage,
 	tournamentRegisterPage,
-	userSubmittedImage,
 } from "~/utils/urls";
+import { userSubmittedImage } from "~/utils/urls-img";
 import { metaTags } from "../../../utils/remix";
 
-import { type TournamentLoaderData, loader } from "../loaders/to.$id.server";
+import { loader, type TournamentLoaderData } from "../loaders/to.$id.server";
 export { loader };
 
 import "~/styles/calendar-event.css";
@@ -120,6 +120,7 @@ export function TournamentLayout() {
 
 	// this is nice to debug with tournament in browser console
 	if (process.env.NODE_ENV === "development") {
+		// biome-ignore lint/correctness/useHookAtTopLevel: process.env.NODE_ENV is a constant
 		React.useEffect(() => {
 			// @ts-expect-error for dev purposes
 			window.tourney = tournament;
@@ -212,7 +213,7 @@ export function TournamentLayout() {
 					!tournament.isLeagueSignup && (
 						<SubNavLink to="seeds">{t("tournament:tabs.seeds")}</SubNavLink>
 					)}
-				{tournament.isOrganizer(user) && !tournament.everyBracketOver && (
+				{tournament.isOrganizer(user) && !tournament.ctx.isFinalized && (
 					<SubNavLink to="admin" data-testid="admin-tab">
 						{t("tournament:tabs.admin")}
 					</SubNavLink>

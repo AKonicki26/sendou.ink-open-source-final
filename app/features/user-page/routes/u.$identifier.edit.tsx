@@ -2,34 +2,33 @@ import { Form, Link, useLoaderData, useMatches } from "@remix-run/react";
 import clsx from "clsx";
 import * as React from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { WeaponCombobox } from "~/components/Combobox";
 import { CustomizedColorsInput } from "~/components/CustomizedColorsInput";
+import { SendouButton } from "~/components/elements/Button";
+import { SendouSelect, SendouSelectItem } from "~/components/elements/Select";
+import { SendouSwitch } from "~/components/elements/Switch";
 import { FormErrors } from "~/components/FormErrors";
 import { FormMessage } from "~/components/FormMessage";
 import { WeaponImage } from "~/components/Image";
 import { Input } from "~/components/Input";
-import { Label } from "~/components/Label";
-import { SubmitButton } from "~/components/SubmitButton";
-import { SendouButton } from "~/components/elements/Button";
-import { SendouSelect, SendouSelectItem } from "~/components/elements/Select";
-import { SendouSwitch } from "~/components/elements/Switch";
 import { StarIcon } from "~/components/icons/Star";
 import { StarFilledIcon } from "~/components/icons/StarFilled";
 import { TrashIcon } from "~/components/icons/Trash";
+import { Label } from "~/components/Label";
+import { SubmitButton } from "~/components/SubmitButton";
+import { WeaponSelect } from "~/components/WeaponSelect";
 import type { Tables } from "~/db/tables";
 import { BADGE } from "~/features/badges/badges-constants";
 import { BadgesSelector } from "~/features/badges/components/BadgesSelector";
 import { useIsMounted } from "~/hooks/useIsMounted";
-import type { MainWeaponId } from "~/modules/in-game-lists/types";
 import { useHasRole } from "~/modules/permissions/hooks";
+import { countryCodeToTranslatedName } from "~/utils/i18n";
 import invariant from "~/utils/invariant";
 import { rawSensToString } from "~/utils/strings";
 import { FAQ_PAGE } from "~/utils/urls";
-import type { UserPageLoaderData } from "../loaders/u.$identifier.server";
-import { COUNTRY_CODES, USER } from "../user-page-constants";
-
 import { action } from "../actions/u.$identifier.edit.server";
 import { loader } from "../loaders/u.$identifier.edit.server";
+import type { UserPageLoaderData } from "../loaders/u.$identifier.server";
+import { COUNTRY_CODES, USER } from "../user-page-constants";
 export { loader, action };
 
 import styles from "~/styles/u.$identifier.module.css";
@@ -215,13 +214,15 @@ function CountrySelect() {
 	const { t, i18n } = useTranslation(["user"]);
 	const data = useLoaderData<typeof loader>();
 	const isMounted = useIsMounted();
-
-	const displayName = new Intl.DisplayNames(i18n.language, { type: "region" });
+	const [value, setValue] = React.useState(data.user.country ?? null);
 
 	// TODO: if react-aria-components start supporting "suppressHydrationWarning" it would likely be a better solution here
 	const items = COUNTRY_CODES.map((countryCode) => ({
 		name: isMounted
-			? (displayName.of(countryCode) ?? countryCode)
+			? countryCodeToTranslatedName({
+					countryCode,
+					language: i18n.language,
+				})
 			: countryCode,
 		id: countryCode,
 		key: countryCode,
@@ -230,22 +231,26 @@ function CountrySelect() {
 	);
 
 	return (
-		<SendouSelect
-			items={items}
-			label={t("user:country")}
-			search={{
-				placeholder: t("user:forms.country.search.placeholder"),
-			}}
-			name="country"
-			defaultSelectedKey={data.user.country ?? undefined}
-			className={styles.countrySelect}
-		>
-			{({ key, ...item }) => (
-				<SendouSelectItem key={key} {...item}>
-					{item.name}
-				</SendouSelectItem>
-			)}
-		</SendouSelect>
+		<>
+			{/* TODO: this is a workaround for clearable not working with uncontrolled values, in future the component should handle this one way or another */}
+			<input type="hidden" name="country" value={value ?? ""} />
+			<SendouSelect
+				items={items}
+				label={t("user:country")}
+				search={{
+					placeholder: t("user:forms.country.search.placeholder"),
+				}}
+				selectedKey={value}
+				onSelectionChange={(value) => setValue(value as string | null)}
+				clearable
+			>
+				{({ key, ...item }) => (
+					<SendouSelectItem key={key} {...item}>
+						{item.name}
+					</SendouSelectItem>
+				)}
+			</SendouSelect>
+		</>
 	);
 }
 
@@ -278,33 +283,27 @@ function WeaponPoolSelect() {
 	return (
 		<div className={clsx("stack md", styles.weaponPool)}>
 			<input type="hidden" name="weapons" value={JSON.stringify(weapons)} />
-			<div>
-				<label htmlFor="weapon">{t("user:weaponPool")}</label>
-				{weapons.length < USER.WEAPON_POOL_MAX_SIZE ? (
-					<WeaponCombobox
-						inputName="weapon"
-						id="weapon"
-						onChange={(weapon) => {
-							if (!weapon) return;
-							setWeapons([
-								...weapons,
-								{
-									weaponSplId: Number(weapon.value) as MainWeaponId,
-									isFavorite: 0,
-								},
-							]);
-						}}
-						// empty on selection
-						key={latestWeapon?.weaponSplId ?? "empty"}
-						weaponIdsToOmit={new Set(weapons.map((w) => w.weaponSplId))}
-						fullWidth
-					/>
-				) : (
-					<span className="text-xs text-warning">
-						{t("user:forms.errors.maxWeapons")}
-					</span>
-				)}
-			</div>
+			{weapons.length < USER.WEAPON_POOL_MAX_SIZE ? (
+				<WeaponSelect
+					label={t("user:weaponPool")}
+					onChange={(weaponSplId) => {
+						setWeapons([
+							...weapons,
+							{
+								weaponSplId,
+								isFavorite: 0,
+							},
+						]);
+					}}
+					disabledWeaponIds={weapons.map((w) => w.weaponSplId)}
+					// empty on selection
+					key={latestWeapon?.weaponSplId ?? "empty"}
+				/>
+			) : (
+				<span className="text-xs text-warning">
+					{t("user:forms.errors.maxWeapons")}
+				</span>
+			)}
 			<div className="stack horizontal sm justify-center">
 				{weapons.map((weapon) => {
 					return (
@@ -360,7 +359,9 @@ function WeaponPoolSelect() {
 
 function BioTextarea({
 	initialValue,
-}: { initialValue: Tables["User"]["bio"] }) {
+}: {
+	initialValue: Tables["User"]["bio"];
+}) {
 	const { t } = useTranslation("user");
 	const [value, setValue] = React.useState(initialValue ?? "");
 

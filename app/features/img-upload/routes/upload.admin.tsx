@@ -1,11 +1,11 @@
 import { Form, Link, useLoaderData } from "@remix-run/react";
 import * as React from "react";
+import { SendouButton } from "~/components/elements/Button";
 import { FormWithConfirm } from "~/components/FormWithConfirm";
+import { TrashIcon } from "~/components/icons/Trash";
 import { Main } from "~/components/Main";
 import { SubmitButton } from "~/components/SubmitButton";
-import { SendouButton } from "~/components/elements/Button";
-import { TrashIcon } from "~/components/icons/Trash";
-import { userSubmittedImage } from "~/utils/urls";
+import { userSubmittedImage } from "~/utils/urls-img";
 
 import { action } from "../actions/upload.admin.server";
 import { loader } from "../loaders/upload.admin.server";
@@ -22,13 +22,13 @@ export default function ImageUploadAdminPage() {
 function ImageValidator() {
 	const data = useLoaderData<typeof loader>();
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies:
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Biome v2 migration
 	React.useEffect(() => {
 		window.scrollTo(0, 0);
 	}, [data]);
 
 	if (data.images.length === 0) {
-		return <>All validated!</>;
+		return "All validated!";
 	}
 
 	return (

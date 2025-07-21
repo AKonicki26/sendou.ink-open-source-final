@@ -1,21 +1,20 @@
 import { Form, useLoaderData } from "@remix-run/react";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { WeaponCombobox } from "~/components/Combobox";
+import { SendouButton } from "~/components/elements/Button";
 import { FormMessage } from "~/components/FormMessage";
 import { WeaponImage } from "~/components/Image";
+import { TrashIcon } from "~/components/icons/Trash";
 import { Label } from "~/components/Label";
 import { RequiredHiddenInput } from "~/components/RequiredHiddenInput";
 import { SubmitButton } from "~/components/SubmitButton";
-import { SendouButton } from "~/components/elements/Button";
-import { TrashIcon } from "~/components/icons/Trash";
+import { WeaponSelect } from "~/components/WeaponSelect";
 import { useUser } from "~/features/auth/core/user";
 import type { MainWeaponId } from "~/modules/in-game-lists/types";
 import type { SendouRouteHandle } from "~/utils/remix.server";
-import { TOURNAMENT_SUB } from "../tournament-subs-constants";
-
 import { action } from "../actions/to.$id.subs.new.server";
 import { loader } from "../loaders/to.$id.subs.new.server";
+import { TOURNAMENT_SUB } from "../tournament-subs-constants";
 export { action, loader };
 
 import "../tournament-subs.css";
@@ -223,32 +222,24 @@ function WeaponPoolSelect({
 				name={id}
 				value={JSON.stringify(weapons)}
 			/>
-			<div>
-				<Label htmlFor={id} required={required}>
-					{label}
-				</Label>
-				{weapons.length < TOURNAMENT_SUB.WEAPON_POOL_MAX_SIZE ? (
-					<>
-						<WeaponCombobox
-							inputName={id}
-							id={id}
-							onChange={(weapon) => {
-								if (!weapon) return;
-								setWeapons([...weapons, Number(weapon.value) as MainWeaponId]);
-							}}
-							// empty on selection
-							key={weapons[weapons.length - 1]}
-							weaponIdsToOmit={new Set([...weapons, ...otherWeapons])}
-							fullWidth
-						/>
-						<FormMessage type="info">{infoText}</FormMessage>
-					</>
-				) : (
-					<span className="text-xs text-warning">
-						{t("user:forms.errors.maxWeapons")}
-					</span>
-				)}
-			</div>
+			{weapons.length < TOURNAMENT_SUB.WEAPON_POOL_MAX_SIZE ? (
+				<>
+					<WeaponSelect
+						label={label}
+						onChange={(weaponId) => {
+							setWeapons([...weapons, weaponId]);
+						}}
+						disabledWeaponIds={[...weapons, ...otherWeapons]}
+						// empty on selection
+						key={weapons[weapons.length - 1]}
+					/>
+					<FormMessage type="info">{infoText}</FormMessage>
+				</>
+			) : (
+				<span className="text-xs text-warning">
+					{t("user:forms.errors.maxWeapons")}
+				</span>
+			)}
 			{weapons.length > 0 ? (
 				<div className="stack horizontal sm justify-center">
 					{weapons.map((weapon) => {

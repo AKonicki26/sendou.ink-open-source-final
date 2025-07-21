@@ -2,20 +2,19 @@ import type { MetaFunction } from "@remix-run/node";
 import { useLoaderData, useSearchParams } from "@remix-run/react";
 import { useTranslation } from "react-i18next";
 import { AddNewButton } from "~/components/AddNewButton";
-import { WeaponCombobox } from "~/components/Combobox";
+import { SendouButton } from "~/components/elements/Button";
 import { Label } from "~/components/Label";
 import { Main } from "~/components/Main";
-import { SendouButton } from "~/components/elements/Button";
+import { WeaponSelect } from "~/components/WeaponSelect";
 import { modesShort } from "~/modules/in-game-lists/modes";
 import { stageIds } from "~/modules/in-game-lists/stage-ids";
 import { mainWeaponIds } from "~/modules/in-game-lists/weapon-ids";
 import { metaTags } from "~/utils/remix";
 import type { SendouRouteHandle } from "~/utils/remix.server";
-import { VODS_PAGE, navIconUrl, newVodPage } from "~/utils/urls";
+import { navIconUrl, newVodPage, VODS_PAGE } from "~/utils/urls";
 import { VodListing } from "../components/VodListing";
-import { VODS_PAGE_BATCH_SIZE, videoMatchTypes } from "../vods-constants";
-
 import { loader } from "../loaders/vods.server";
+import { VODS_PAGE_BATCH_SIZE, videoMatchTypes } from "../vods-constants";
 export { loader };
 
 import "../vods.css";
@@ -144,17 +143,14 @@ function Filters({
 				</select>
 			</div>
 
-			<div>
-				<Label>{t("vods:forms.title.weapon")}</Label>
-				<WeaponCombobox
-					inputName="weapon"
-					initialWeaponId={weapon}
-					onChange={(selected) => {
-						addToSearchParams("weapon", selected?.value ?? "");
-					}}
-					nullable
-				/>
-			</div>
+			<WeaponSelect
+				label={t("vods:forms.title.weapon")}
+				initialValue={weapon}
+				onChange={(weaponId) => {
+					addToSearchParams("weapon", weaponId ?? "");
+				}}
+				clearable
+			/>
 
 			<div>
 				<Label>{t("vods:forms.title.type")}</Label>

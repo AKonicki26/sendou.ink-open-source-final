@@ -10,10 +10,8 @@ import {
 import * as React from "react";
 import { Avatar } from "~/components/Avatar";
 import { Catcher } from "~/components/Catcher";
-import { Input } from "~/components/Input";
-import { Main } from "~/components/Main";
-import { SubmitButton } from "~/components/SubmitButton";
 import { SendouButton } from "~/components/elements/Button";
+import { SendouSelect, SendouSelectItem } from "~/components/elements/Select";
 import {
 	SendouTab,
 	SendouTabList,
@@ -21,17 +19,21 @@ import {
 	SendouTabs,
 } from "~/components/elements/Tabs";
 import { UserSearch } from "~/components/elements/UserSearch";
+import { FormMessage } from "~/components/FormMessage";
+import { Input } from "~/components/Input";
 import { SearchIcon } from "~/components/icons/Search";
+import { Main } from "~/components/Main";
+import { SubmitButton } from "~/components/SubmitButton";
+import { SEED_VARIATIONS } from "~/features/api-private/constants";
 import { FRIEND_CODE_REGEXP_PATTERN } from "~/features/sendouq/q-constants";
 import { useHasRole } from "~/modules/permissions/hooks";
 import { metaTags } from "~/utils/remix";
 import {
+	impersonateUrl,
 	SEED_URL,
 	STOP_IMPERSONATING_URL,
-	impersonateUrl,
 	userPage,
 } from "~/utils/urls";
-
 import { action } from "../actions/admin.server";
 import { loader } from "../loaders/admin.server";
 export { loader, action };
@@ -117,7 +119,7 @@ function AdminActions() {
 			{isStaff ? <LinkPlayer /> : null}
 			{isStaff ? <GiveArtist /> : null}
 			{isStaff ? <GiveVideoAdder /> : null}
-			{isStaff ? <GiveTournamentOrganizer /> : null}
+			{isAdmin ? <GiveTournamentOrganizer /> : null}
 			{isStaff ? <UpdateFriendCode /> : null}
 			{isStaff ? <MigrateUser /> : null}
 			{isAdmin ? <ForcePatron /> : null}
@@ -190,6 +192,9 @@ function MigrateUser() {
 					Migrate
 				</SubmitButton>
 			</div>
+			<FormMessage type="info">
+				Note: data on "New user" will be deleted (e.g. builds)
+			</FormMessage>
 		</fetcher.Form>
 	);
 }
@@ -274,6 +279,7 @@ function GiveTournamentOrganizer() {
 
 function UpdateFriendCode() {
 	const fetcher = useFetcher();
+	const id = React.useId();
 
 	return (
 		<fetcher.Form className="stack md" method="post">
@@ -281,10 +287,10 @@ function UpdateFriendCode() {
 			<div className="stack horizontal md">
 				<UserSearch label="User" name="user" />
 				<div>
-					<label>Friend code</label>
+					<label htmlFor={id}>Friend code</label>
 					<Input
 						leftAddon="SW-"
-						id="friendCode"
+						id={id}
 						name="friendCode"
 						pattern={FRIEND_CODE_REGEXP_PATTERN}
 						placeholder="1234-5678-9012"
@@ -419,8 +425,16 @@ function Seed() {
 			method="post"
 			action={SEED_URL}
 		>
-			<h2>Seed</h2>
-			<SubmitButton state={fetcher.state}>Seed</SubmitButton>
+			<div className="stack horizontal md items-end">
+				<SubmitButton state={fetcher.state}>Seed</SubmitButton>
+				<SendouSelect label="Variation" name="variation">
+					{SEED_VARIATIONS.map((variation) => (
+						<SendouSelectItem key={variation} id={variation}>
+							{variation}
+						</SendouSelectItem>
+					))}
+				</SendouSelect>
+			</div>
 		</fetcher.Form>
 	);
 }

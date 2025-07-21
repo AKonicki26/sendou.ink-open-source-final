@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import * as R from "remeda";
-import { WeaponCombobox } from "~/components/Combobox";
-import { WeaponImage } from "~/components/Image";
-import { Label } from "~/components/Label";
 import { SendouButton } from "~/components/elements/Button";
+import { WeaponImage } from "~/components/Image";
 import { CrossIcon } from "~/components/icons/Cross";
+import { Label } from "~/components/Label";
+import { WeaponSelect } from "~/components/WeaponSelect";
 import type { Tables } from "~/db/tables";
 import type { TierName } from "~/features/mmr/mmr-constants";
 import { TIERS } from "~/features/mmr/mmr-constants";
@@ -123,20 +123,18 @@ function WeaponFilterFields({
 }) {
 	return (
 		<div className="stack horizontal sm flex-wrap">
-			<WeaponCombobox
-				inputName="weapon"
-				key={value.length}
-				weaponIdsToOmit={new Set(value)}
-				onChange={(wpn) =>
-					wpn &&
+			<WeaponSelect
+				disabledWeaponIds={value}
+				onChange={(weaponId) =>
 					changeFilter({
 						_tag: "Weapon",
 						weaponSplIds:
 							value.length >= 10
-								? [...value.slice(1, 10), Number(wpn.value) as MainWeaponId]
-								: [...value, Number(wpn.value) as MainWeaponId],
+								? [...value.slice(1, 10), weaponId]
+								: [...value, weaponId],
 					})
 				}
+				key={value.join("-")}
 			/>
 			{value.map((weapon) => (
 				<SendouButton
