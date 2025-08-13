@@ -143,6 +143,10 @@
 		"displayName": "Cap the Zone",
 		"authorDiscordId": "752582395076673577"
 	},
+	"carma": {
+		"displayName": "Carma's Colosseum",
+		"authorDiscordId": "338806780446638082"
+	},
 	"catfoodbowl": {
 		"displayName": "Dr. Meowser's Cat Food Bowl",
 		"authorDiscordId": "324396128906903552"
@@ -161,6 +165,18 @@
 	},
 	"chao": {
 		"displayName": "Chao Garden",
+		"authorDiscordId": "528851510222782474"
+	},
+	"chaodark": {
+		"displayName": "Chao Garden: Dark Edition",
+		"authorDiscordId": "528851510222782474"
+	},
+	"chaohero": {
+		"displayName": "Chao Garden: Hero Edition",
+		"authorDiscordId": "528851510222782474"
+	},
+	"chaorobot": {
+		"displayName": "Chao Race",
 		"authorDiscordId": "528851510222782474"
 	},
 	"chara_special": {
@@ -464,7 +480,7 @@
 		"authorDiscordId": "1170249805373657093"
 	},
 	"lemoncider": {
-		"displayName": "Lemon Cider: One Trick!",
+		"displayName": "Lemon Cider Birthday Bash",
 		"authorDiscordId": "1320944066002681876"
 	},
 	"letthemcook": {
@@ -498,6 +514,10 @@
 	"lunablaster": {
 		"displayName": "Blast Away!",
 		"authorDiscordId": "342369454719631361"
+	},
+	"madrid": {
+		"displayName": "Madridista",
+		"authorDiscordId": "752582395076673577"
 	},
 	"magatama": {
 		"displayName": "Magatama Turnabout",
@@ -536,7 +556,7 @@
 		"authorDiscordId": "528851510222782474"
 	},
 	"mew": {
-		"displayName": "5 TSO Tournaments",
+		"displayName": "5 IKT Tournaments",
 		"authorDiscordId": "528851510222782474"
 	},
 	"mimikyu": {
@@ -631,6 +651,18 @@
 		"displayName": "Weapon Lockdown",
 		"authorDiscordId": "338806780446638082"
 	},
+	"oktofest-bronze": {
+		"displayName": "Oktofest LAN (Third)",
+		"authorDiscordId": "751912670403362836"
+	},
+	"oktofest-gold": {
+		"displayName": "Oktofest LAN (First)",
+		"authorDiscordId": "751912670403362836"
+	},
+	"oktofest-silver": {
+		"displayName": "Oktofest LAN (Second)",
+		"authorDiscordId": "751912670403362836"
+	},
 	"original-message-deleted": {
 		"displayName": "[Original Message Deleted]",
 		"authorDiscordId": "751912670403362836"
@@ -706,6 +738,14 @@
 	"reccent": {
 		"displayName": "The REC Center",
 		"authorDiscordId": "1320944066002681876"
+	},
+	"reshiram": {
+		"displayName": "Fusion Flare",
+		"authorDiscordId": "336683473714544641"
+	},
+	"reshiramshiny": {
+		"displayName": "Fusion Flare (Shiny Edition)",
+		"authorDiscordId": "336683473714544641"
 	},
 	"revocup": {
 		"displayName": "Revo'Cup",
@@ -800,7 +840,7 @@
 		"authorDiscordId": "528851510222782474"
 	},
 	"shinymew": {
-		"displayName": "10 TSO Tournaments",
+		"displayName": "10 IKT Tournaments",
 		"authorDiscordId": "528851510222782474"
 	},
 	"shinywooper": {
